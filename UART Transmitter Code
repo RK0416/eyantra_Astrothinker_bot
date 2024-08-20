@@ -1,0 +1,128 @@
+// AstroTinker Bot : Task 2A : UART Transmitter
+/*
+Instructions
+-------------------
+Students are not allowed to make any changes in the Module declaration.
+
+This file is used to generate UART Tx data packet to transmit the messages based on the input data.
+
+Recommended Quartus Version : 20.1
+The submitted project file must be 20.1 compatible as the evaluation will be done on Quartus Prime Lite 20.1.
+
+Warning: The error due to compatibility will not be entertained.
+-------------------
+*/
+
+/*
+Module UART Transmitter
+
+Input:  clk_50M - 50 MHz clock
+        data    - 8-bit data line to transmit
+Output: tx      - UART Transmission Line
+*/
+
+// module declaration
+module uart_tx(
+    input  clk_50M,
+    input  [7:0] data,
+    output reg tx
+);
+
+//////////////////DO NOT MAKE ANY CHANGES ABOVE THIS LINE//////////////////
+
+initial begin
+	 tx = 0;
+end
+
+////////// Add your code here ///////////////////
+
+
+	reg [2:0] index;
+	reg [1:0] state; 
+	reg [8:0] clk_counter;
+	reg [2:0] temp;
+
+	initial begin
+		index =0;
+		state =0;
+		clk_counter = 0;
+		temp = 0;
+	end
+
+//parameter BAUD_RATE = 115200; // Baud rate
+
+	parameter BIT_TIME = 434; // bit duration 434 cycles
+	parameter S0 = 2'b00;
+	parameter S1 = 2'b01;
+	parameter S2 = 2'b10;
+	parameter S3 = 2'b11;
+
+	always @(posedge clk_50M) begin
+
+	case(state) 
+
+		2'b00: begin
+			index =0;
+
+			if(clk_counter < BIT_TIME) begin
+				tx =0;
+				clk_counter=clk_counter+1;
+			end
+			else if( clk_counter == BIT_TIME) begin
+				clk_counter = 0;
+				tx = data[index];
+				state = S1;
+			end
+		end
+
+		2'b01: begin
+			clk_counter = clk_counter+1;
+			if( clk_counter < BIT_TIME) begin 
+				tx	= data[index];
+			end
+
+			else if( clk_counter == BIT_TIME && index == 3'b111) begin 
+				clk_counter = 0;
+				state = S2;
+				tx = 1;
+				index =0;
+			end
+
+			else if(clk_counter == BIT_TIME) begin
+				clk_counter =0;
+				index = index + 1;
+				tx = data[index] ;
+			end
+		end
+
+		2'b10: begin
+			clk_counter = clk_counter +1 ;
+			if(clk_counter < BIT_TIME) begin
+				tx =1;
+			end
+
+			else if( clk_counter == BIT_TIME) begin
+				clk_counter =1;
+				temp = temp+1;
+
+				if(temp<3'b100) begin
+					state = S0;
+					tx =0;
+				end
+				else begin
+					tx =1;
+					state = S3;
+				end
+			end
+		end
+
+		2'b11: begin
+			tx = 1;
+			state =S3;
+		end
+	endcase
+end
+
+//////////////////DO NOT MAKE ANY CHANGES BELOW THIS LINE//////////////////
+
+endmodule
