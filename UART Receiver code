@@ -1,0 +1,111 @@
+// AstroTinker Bot : Task 2A : UART Receiver
+/*
+Instructions
+-------------------
+Students are not allowed to make any changes in the Module declaration.
+
+This file is used to receive UART Rx data packet from the receiver line and then update the rx_msg and rx_complete data lines.
+
+Recommended Quartus Version : 20.1
+The submitted project file must be 20.1 compatible as the evaluation will be done on Quartus Prime Lite 20.1.
+
+Warning: The error due to compatibility will not be entertained.
+-------------------
+*/
+
+/*
+Module UART Receiver
+
+Input:  clk_50M - 50 MHz clock
+        rx      - UART Receiver
+
+Output: rx_msg      - read incoming message
+        rx_complete - message received flag
+*/
+
+// module declaration
+module uart_rx (
+  input clk_50M, rx,
+  output reg [7:0] rx_msg,
+  output reg rx_complete
+);
+
+//////////////////DO NOT MAKE ANY CHANGES ABOVE THIS LINE//////////////////
+
+////////////////////////// Add your code here
+
+
+initial begin
+
+rx_msg = 0; rx_complete = 0;
+
+end
+
+parameter IDLE =3'b000, S0=3'b001,S1=3'b010,S2=3'b011,S3=3'b100;
+
+
+reg[9:0] clk_counter=10'd216;
+reg[2:0] state =IDLE;
+reg baud_check;
+reg[10:0] register=0; // to store 10 data bits
+reg[3:0] bit_counter=0;
+reg[10:0] count=1'b0;
+
+
+always @(posedge clk_50M ) begin
+  if (clk_counter == 10'd433) begin
+      clk_counter <= 0;
+    baud_check <= 1;
+  end else begin
+    clk_counter <= clk_counter + 1;
+    baud_check <= 0;
+  end
+end
+
+always @(posedge clk_50M) begin
+	case(state)
+		IDLE:begin
+		  register<=0;
+		  rx_complete<=1'b0;
+		  if(baud_check)begin
+			  if(rx==0)begin
+				state=S0;
+		     end 
+			end  
+		end
+      S0:begin
+			if(baud_check)begin
+				register<={register[9:0],rx};
+				bit_counter<=bit_counter+1;
+			
+			end
+			if(bit_counter==8)begin
+				state=S1;
+				bit_counter<=1'b0;
+			end	
+		end
+		S1:begin
+			if(baud_check)begin
+				if(rx)begin
+					state = S2;
+				end
+			end
+		end
+		S2:begin
+			count<=count+1'b1;
+			if(count==11'd214)begin
+				state=S3;
+				count<=1'b0;
+			end
+		end
+		S3:begin
+			rx_complete<=1'b1;
+			rx_msg<=register;
+			state=IDLE;
+		end
+	endcase
+end
+
+//////////////////DO NOT MAKE ANY CHANGES BELOW THIS LINE//////////////////
+
+endmodule
